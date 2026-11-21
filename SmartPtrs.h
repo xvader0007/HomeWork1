@@ -1,6 +1,31 @@
 #ifndef SMARTPTRS_H
 #define SMARTPTRS_H
 
+#include <atomic>
+#include <cstddef>
+
+struct ControlBlock
+{
+    std::atomic<int> strong_count;
+
+    explicit ControlBlock(int initial = 1) noexcept : strong_count(initial) {}
+
+    void Add_ref() noexcept
+    {
+        strong_count.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    bool Release_ref() noexcept
+    {
+        return strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1;
+    }
+
+    bool Use_count() const noexcept
+    {
+        return strong_count.load(std::memory_order_relaxed);
+    }
+};
+
 template <typename T>
 class UniqPtr
 {
@@ -197,43 +222,42 @@ class ShrdPtr
 {
 private:
     T* ptr;
-    int* ref_count;
+    ControlBlock* cb;
 
     template <typename U> friend class ShrdPtr;
 
     void Release() noexcept
     {
-        if(ref_count != nullptr)
+        if(cb != nullptr)
         {
-            (*ref_count)--;
-            if(*ref_count == 0)
+            if(cb->Release_ref())
             {
                 delete ptr;
-                delete ref_count;
+                delete cb;
             }
 
             ptr = nullptr;
-            ref_count = nullptr;
+            cb = nullptr;
         }
     }
 public:
     template <typename U>
-    ShrdPtr(const ShrdPtr<U>& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    ShrdPtr(const ShrdPtr<U>& other) noexcept : ptr(other.ptr), cb(other.cb)
     {
-        if (ref_count != nullptr)
+        if (cb != nullptr)
         {
-            (*ref_count)++;
+            cb->Add_ref();
         }
     }
     explicit ShrdPtr(T* ptr_a = nullptr) : ptr(ptr_a)
     {
-        if(ptr != nullptr) ref_count = new int(1);
-        else ref_count = nullptr;
+        if(ptr != nullptr) cb = new ControlBlock(1);
+        else cb = nullptr;
     }
 
-    ShrdPtr(const ShrdPtr& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    ShrdPtr(const ShrdPtr& other) noexcept : ptr(other.ptr), cb(other.cb)
     {
-        if(ref_count != nullptr) (*ref_count)++;
+        if(cb != nullptr) cb->Add_ref();
     }
 
     ShrdPtr& operator=(const ShrdPtr& other) noexcept
@@ -243,17 +267,17 @@ public:
             Release();
 
             ptr = other.ptr;
-            ref_count = other.ref_count;
-            if(ref_count != nullptr) (*ref_count)++;
+            cb = other.cb;
+            if(cb != nullptr) cb->Add_ref();
         }
 
         return *this;
     }
 
-    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), ref_count(other.cb)
     {
         other.ptr = nullptr;
-        other.ref_count = nullptr;
+        other.cb = nullptr;
     }
 
     ShrdPtr& operator=(ShrdPtr&& other) noexcept
@@ -263,10 +287,10 @@ public:
             Release();
 
             ptr = other.ptr;
-            ref_count = other.ref_count;
+            cb = other.cb;
 
             other.ptr = nullptr;
-            other.ref_count = nullptr;
+            other.cb = nullptr;
         }
         return *this;
     }
@@ -274,15 +298,15 @@ public:
     T& operator*() const { return *ptr; }
     T* operator->() const { return ptr; }
     T* get() const noexcept { return ptr; }
-    int use_count() const noexcept { return ref_count ? *ref_count : 0; }
+    int Use_count() const noexcept { return cb ? cb->Use_count() : 0; }
 
-    void reset(T* ptr_p = nullptr)
+    void Reset(T* ptr_p = nullptr)
     {
         if (ptr != ptr_p)
         {
             Release();
             ptr = ptr_p;
-            ref_count = (ptr != nullptr) ? new int(1) : nullptr;
+            cb = (ptr != nullptr) ? new ControlBlock(1) : nullptr;
         }
     }
 
@@ -302,34 +326,33 @@ class ShrdPtr<T[]>
 {
 private:
     T* ptr;
-    int* ref_count;
+    ControlBlock* cb;
 
     void Release() noexcept
     {
-        if (ref_count != nullptr)
+        if (cb != nullptr)
         {
-            --(*ref_count);
-            if (*ref_count == 0)
+            if (cb->Release_ref())
             {
-                delete[] ptr; // Вызываем delete[] для массива[cite: 4]
-                delete ref_count;
+                delete[] ptr;
+                delete cb;
             }
             ptr = nullptr;
-            ref_count = nullptr;
+            cb = nullptr;
         }
     }
 
 public:
     explicit ShrdPtr(T* ptr_a = nullptr) : ptr(ptr_a)
     {
-        ref_count = (ptr != nullptr) ? new int(1) : nullptr;
+        cb = (ptr != nullptr) ? new ControlBlock(1) : nullptr;
     }
 
-    ShrdPtr(const ShrdPtr& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    ShrdPtr(const ShrdPtr& other) noexcept : ptr(other.ptr), cb(other.cb)
     {
-        if (ref_count != nullptr)
+        if (cb != nullptr)
         {
-            ++(*ref_count);
+            cb->Add_ref();
         }
     }
 
@@ -339,19 +362,19 @@ public:
         {
             Release();
             ptr = other.ptr;
-            ref_count = other.ref_count;
-            if (ref_count != nullptr)
+            cb = other.cb;
+            if (cb != nullptr)
             {
-                ++(*ref_count);
+                cb->Add_ref();
             }
         }
         return *this;
     }
 
-    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), cb(other.cb)
     {
         other.ptr = nullptr;
-        other.ref_count = nullptr;
+        other.cb = nullptr;
     }
 
     ShrdPtr& operator=(ShrdPtr&& other) noexcept
@@ -360,24 +383,24 @@ public:
         {
             Release();
             ptr = other.ptr;
-            ref_count = other.ref_count;
+            cb = other.cb;
             other.ptr = nullptr;
-            other.ref_count = nullptr;
+            other.cb = nullptr;
         }
         return *this;
     }
 
     T& operator[](int index) const { return ptr[index]; }
     T* get() const noexcept { return ptr; }
-    int use_count() const noexcept { return ref_count ? *ref_count : 0; }
+    int Use_count() const noexcept { return cb ? cb->Use_count() : 0; }
 
-    void reset(T* ptr_p = nullptr)
+    void Reset(T* ptr_p = nullptr)
     {
         if (ptr != ptr_p)
         {
             Release();
             ptr = ptr_p;
-            ref_count = (ptr != nullptr) ? new int(1) : nullptr;
+            cb = (ptr != nullptr) ? new ControlBlock(1) : nullptr;
         }
     }
 
@@ -386,4 +409,4 @@ public:
     ~ShrdPtr() { Release(); }
 };
 
-#endif //SMARTPTRS_H
+#endif //SMARTPTRS_H`

@@ -91,134 +91,299 @@ public:
     ~UniqPtr() { delete ptr;}
 };
 
-#endif //SMARTPTRS_H
-
-/*
- *#pragma once
-
-// ==========================================
-// 1. UnqPtr: Ведущий указатель (Владелец)
-// ==========================================
 template <typename T>
-class UnqPtr {
+class UniqPtr<T[]>
+{
 private:
     T* ptr;
-
+    int count;
 public:
-    // Конструктор
-    explicit UnqPtr(T* p = nullptr) : ptr(p) {}
-
-    // Конструктор копирования (Глубокое копирование, как требует ТЗ)
-    UnqPtr(const UnqPtr& other) {
-        ptr = (other.ptr != nullptr) ? new T(*other.ptr) : nullptr;
-    }
-
-    // Подтипизация для UnqPtr: копируем объект производного класса в базовый
-    template <typename U>
-    UnqPtr(const UnqPtr<U>& other) {
-        ptr = (other.get() != nullptr) ? new T(*other.get()) : nullptr;
-    }
-
-    // Оператор присваивания
-    UnqPtr& operator=(const UnqPtr& other) {
-        if (this != &other) {
-            delete ptr;
-            ptr = (other.ptr != nullptr) ? new T(*other.ptr) : nullptr;
+    explicit UniqPtr(T* ptr_a = nullptr, int size = 0) : ptr(ptr_a), count(ptr_a ? size : 0) {}
+    UniqPtr(const UniqPtr& other) : count(other.count)
+    {
+        if(other.ptr != nullptr && count > 0)
+        {
+            ptr = new T[count];
+            for(int i = 0; i < count; i++) ptr[i] = other.ptr[i];
         }
+        else
+        {
+            ptr = nullptr;
+            count = 0;
+        }
+    }
+
+    UniqPtr& operator=(const UniqPtr& other)
+    {
+        if(this == &other) return *this;
+
+        delete[] ptr;
+
+        count = other.count;
+        if(other.ptr != nullptr && count > 0)
+        {
+            ptr = new T[count];
+            for(int i = 0; i < count; i++) ptr[i] = other.ptr[i];
+        }
+        else
+        {
+            ptr = nullptr;
+            count = 0;
+        }
+
         return *this;
     }
 
-    // Деструктор
-    ~UnqPtr() {
-        delete ptr;
+    UniqPtr(UniqPtr&& other) noexcept : ptr(other.ptr), count(other.count)
+    {
+        other.ptr = nullptr;
+        other.count = 0;
     }
 
-    // Доступ
-    T& operator*() const { return *ptr; }
-    T* operator->() const { return ptr; }
-    T* get() const { return ptr; }
+    UniqPtr& operator=(UniqPtr&& other) noexcept
+    {
+        if (this == &other) return *this;
+
+        delete[] ptr;
+
+        ptr = other.ptr;
+        count = other.count;
+
+        other.ptr = nullptr;
+        other.count = 0;
+
+        return *this;
+    }
+
+    T& operator[](int index) const
+    {
+        return ptr[index];
+    }
+
+    T* Get() const noexcept { return ptr; }
+    int Size() const noexcept { return count; }
+
+    T* Release() noexcept
+    {
+        T* temp = ptr;
+        ptr = nullptr;
+        count = 0;
+        return temp;
+    }
+
+    void Reset(T* ptr_p = nullptr, int new_size = 0) noexcept
+    {
+        if (ptr != ptr_p)
+        {
+            delete[] ptr;
+            ptr = ptr_p;
+            count = ptr_p ? new_size : 0;
+        }
+    }
+
+    explicit operator bool() const noexcept
+    {
+        return ptr != nullptr;
+    }
+
+    ~UniqPtr()
+    {
+        delete[] ptr;
+    }
 };
 
-
-// ==========================================
-// 2. ShrdPtr: Дескриптор (Наблюдатель с подсчетом)
-// ==========================================
 template <typename T>
-class ShrdPtr {
+class ShrdPtr
+{
 private:
-    UnqPtr<T>* master;     // Указывает строго на UnqPtr
-    size_t* ref_count;     // Динамический счетчик ссылок
+    T* ptr;
+    int* ref_count;
 
-    // Делаем все инстанции ShrdPtr дружественными для реализации подтипизации
     template <typename U> friend class ShrdPtr;
 
-    // Вспомогательный метод очистки
-    void release() {
-        if (ref_count) {
+    void Release() noexcept
+    {
+        if(ref_count != nullptr)
+        {
             (*ref_count)--;
-            if (*ref_count == 0) {
-                delete master;     // Удаляем владельца (он сам удалит T*)
-                delete ref_count;  // Удаляем счетчик
+            if(*ref_count == 0)
+            {
+                delete ptr;
+                delete ref_count;
             }
+
+            ptr = nullptr;
+            ref_count = nullptr;
+        }
+    }
+public:
+    template <typename U>
+    ShrdPtr(const ShrdPtr<U>& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    {
+        if (ref_count != nullptr)
+        {
+            (*ref_count)++;
+        }
+    }
+    explicit ShrdPtr(T* ptr_a = nullptr) : ptr(ptr_a)
+    {
+        if(ptr != nullptr) ref_count = new int(1);
+        else ref_count = nullptr;
+    }
+
+    ShrdPtr(const ShrdPtr& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    {
+        if(ref_count != nullptr) (*ref_count)++;
+    }
+
+    ShrdPtr& operator=(const ShrdPtr& other) noexcept
+    {
+        if(this != &other)
+        {
+            Release();
+
+            ptr = other.ptr;
+            ref_count = other.ref_count;
+            if(ref_count != nullptr) (*ref_count)++;
+        }
+
+        return *this;
+    }
+
+    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    {
+        other.ptr = nullptr;
+        other.ref_count = nullptr;
+    }
+
+    ShrdPtr& operator=(ShrdPtr&& other) noexcept
+    {
+        if (this != &other)
+        {
+            Release();
+
+            ptr = other.ptr;
+            ref_count = other.ref_count;
+
+            other.ptr = nullptr;
+            other.ref_count = nullptr;
+        }
+        return *this;
+    }
+
+    T& operator*() const { return *ptr; }
+    T* operator->() const { return ptr; }
+    T* get() const noexcept { return ptr; }
+    int use_count() const noexcept { return ref_count ? *ref_count : 0; }
+
+    void reset(T* ptr_p = nullptr)
+    {
+        if (ptr != ptr_p)
+        {
+            Release();
+            ptr = ptr_p;
+            ref_count = (ptr != nullptr) ? new int(1) : nullptr;
+        }
+    }
+
+    explicit operator bool() const noexcept
+    {
+        return ptr != nullptr;
+    }
+
+    ~ShrdPtr()
+    {
+        Release();
+    }
+};
+
+template <typename T>
+class ShrdPtr<T[]>
+{
+private:
+    T* ptr;
+    int* ref_count;
+
+    void Release() noexcept
+    {
+        if (ref_count != nullptr)
+        {
+            --(*ref_count);
+            if (*ref_count == 0)
+            {
+                delete[] ptr; // Вызываем delete[] для массива[cite: 4]
+                delete ref_count;
+            }
+            ptr = nullptr;
+            ref_count = nullptr;
         }
     }
 
 public:
-    // Конструктор. Принимает динамически выделенный UnqPtr!
-    explicit ShrdPtr(UnqPtr<T>* m = nullptr) : master(m) {
-        ref_count = (master != nullptr) ? new size_t(1) : nullptr;
+    explicit ShrdPtr(T* ptr_a = nullptr) : ptr(ptr_a)
+    {
+        ref_count = (ptr != nullptr) ? new int(1) : nullptr;
     }
 
-    // Конструктор копирования (просто увеличиваем счетчик)
-    ShrdPtr(const ShrdPtr& other) : master(other.master), ref_count(other.ref_count) {
-        if (ref_count) {
-            (*ref_count)++;
+    ShrdPtr(const ShrdPtr& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    {
+        if (ref_count != nullptr)
+        {
+            ++(*ref_count);
         }
     }
 
-    // Подтипизация (Subtyping): C1 ⊆ C2
-    template <typename U>
-    ShrdPtr(const ShrdPtr<U>& other) {
-        // Защита: проверяем на этапе компиляции, можно ли привести U* к T*
-        U* check_type = nullptr;
-        T* type_safe = static_cast<T*>(check_type);
-        (void)type_safe; // подавляем предупреждение о неиспользуемой переменной
-
-        // UnqPtr<U> и UnqPtr<T> — это разные типы для компилятора,
-        // но в памяти они оба состоят ровно из одного сырого указателя.
-        // Поэтому каст через reinterpret_cast здесь абсолютно валиден и эффективен.
-        master = reinterpret_cast<UnqPtr<T>*>(other.master);
-        ref_count = other.ref_count;
-
-        if (ref_count) {
-            (*ref_count)++;
-        }
-    }
-
-    // Оператор присваивания
-    ShrdPtr& operator=(const ShrdPtr& other) {
-        if (this != &other) {
-            release(); // Отпускаем старый объект
-
-            master = other.master;
+    ShrdPtr& operator=(const ShrdPtr& other) noexcept
+    {
+        if (this != &other)
+        {
+            Release();
+            ptr = other.ptr;
             ref_count = other.ref_count;
-            if (ref_count) {
-                (*ref_count)++;
+            if (ref_count != nullptr)
+            {
+                ++(*ref_count);
             }
         }
         return *this;
     }
 
-    // Деструктор
-    ~ShrdPtr() {
-        release();
+    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), ref_count(other.ref_count)
+    {
+        other.ptr = nullptr;
+        other.ref_count = nullptr;
     }
 
-    // Доступ (цепочка: ShrdPtr -> UnqPtr -> T)
-    T& operator*() const { return **master; }
-    T* operator->() const { return master->get(); }
+    ShrdPtr& operator=(ShrdPtr&& other) noexcept
+    {
+        if (this != &other)
+        {
+            Release();
+            ptr = other.ptr;
+            ref_count = other.ref_count;
+            other.ptr = nullptr;
+            other.ref_count = nullptr;
+        }
+        return *this;
+    }
 
-    // Для тестов
-    size_t use_count() const { return ref_count ? *ref_count : 0; }
+    T& operator[](int index) const { return ptr[index]; }
+    T* get() const noexcept { return ptr; }
+    int use_count() const noexcept { return ref_count ? *ref_count : 0; }
+
+    void reset(T* ptr_p = nullptr)
+    {
+        if (ptr != ptr_p)
+        {
+            Release();
+            ptr = ptr_p;
+            ref_count = (ptr != nullptr) ? new int(1) : nullptr;
+        }
+    }
+
+    explicit operator bool() const noexcept { return ptr != nullptr; }
+
+    ~ShrdPtr() { Release(); }
 };
-*/
+
+#endif //SMARTPTRS_H

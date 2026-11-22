@@ -2,7 +2,6 @@
 #define SMARTPTRS_H
 
 #include <atomic>
-#include <cstddef>
 
 struct ControlBlock
 {
@@ -274,7 +273,7 @@ public:
         return *this;
     }
 
-    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), ref_count(other.cb)
+    ShrdPtr(ShrdPtr&& other) noexcept : ptr(other.ptr), cb(other.cb)
     {
         other.ptr = nullptr;
         other.cb = nullptr;

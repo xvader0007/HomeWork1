@@ -72,7 +72,7 @@ public:
     }
     T& operator*() const {return *ptr;}
     T* operator->() const {return ptr;}
-    T* Get() const {return ptr;}
+    T* Get() const noexcept {return ptr;}
 
     template <typename U>
     UniqPtr(const UniqPtr<U>& other)

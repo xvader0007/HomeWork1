@@ -13,7 +13,7 @@ struct Tracker {
 
 int Tracker::alive = 0;
 
-// Наследник для проверки подтипизации (C1 ⊆ C2)
+// Наследник для проверки подтипизации
 struct DerivedTracker : public Tracker {
     DerivedTracker(int v = 0) : Tracker(v) {}
 };

@@ -11,17 +11,17 @@ struct ControlBlock
 
     void Add_ref() noexcept
     {
-        strong_count.fetch_add(1, std::memory_order_relaxed);
+        strong_count.fetch_add(1, std::memory_order_relaxed); //второе для ускорение и безопасности
     }
 
     bool Release_ref() noexcept
     {
-        return strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1;
+        return strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1; //второе завершает процессы
     }
 
-    bool Use_count() const noexcept
+    int Use_count() const noexcept
     {
-        return strong_count.load(std::memory_order_relaxed);
+        return strong_count.load(std::memory_order_relaxed); //атомарно читает
     }
 };
 
@@ -31,9 +31,7 @@ class UniqPtr
 private:
     T* ptr;
 public:
-    //конструктор
     explicit UniqPtr(T* ptr_a = nullptr) : ptr(ptr_a) {}
-    //конструктор копирования
     UniqPtr(const UniqPtr& other)
     {
         if (other.ptr != nullptr)
@@ -42,7 +40,6 @@ public:
         }
         else ptr = nullptr;
     }
-    //оператор присваивания
     UniqPtr& operator=(const UniqPtr& other)
     {
         if (this == &other) return *this;
@@ -57,13 +54,11 @@ public:
 
         return *this;
     }
-    //конструктор перемещения
     UniqPtr(UniqPtr&& other) noexcept
     {
         ptr = other.ptr;
         other.ptr = nullptr;
     }
-    //оператор перемещения
     UniqPtr& operator=(UniqPtr&& other) noexcept
     {
         if (this == &other) return *this;
@@ -111,7 +106,6 @@ public:
         return ptr != nullptr;
     }
 
-    //деструктор
     ~UniqPtr() { delete ptr;}
 };
 

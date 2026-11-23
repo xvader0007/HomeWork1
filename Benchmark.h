@@ -7,35 +7,40 @@
 #include <memory>
 #include "SmartPtrs.h"
 
-class Timer {
+class Timer
+{
 private:
     std::chrono::high_resolution_clock::time_point start_time;
 public:
     Timer() : start_time(std::chrono::high_resolution_clock::now()) {}
 
-    double elapsed_ms() const {
+    double elapsed_ms() const
+    {
         auto end_time = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> diff = end_time - start_time;
         return diff.count();
     }
 };
 
-// Тест: Одиночное владение
-inline void run_unique_benchmark(size_t iterations) {
+//Одиночное владение
+inline void run_unique_benchmark(size_t iterations)
+{
     volatile int sink = 0;
 
     //Сырые указатели
     Timer t_raw;
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i)
+    {
         int* p = new int(static_cast<int>(i));
         sink += *p;
         delete p;
     }
     double time_raw = t_raw.elapsed_ms();
 
-    //Твой UniqPtr
+    //UniqPtr
     Timer t_my;
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i)
+    {
         UniqPtr<int> p(new int(static_cast<int>(i)));
         sink += *p;
     }
@@ -43,7 +48,8 @@ inline void run_unique_benchmark(size_t iterations) {
 
     //STL
     Timer t_stl;
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i)
+    {
         std::unique_ptr<int> p(new int(static_cast<int>(i)));
         sink += *p;
     }
@@ -57,13 +63,15 @@ inline void run_unique_benchmark(size_t iterations) {
               << " | " << std::setw(14) << time_stl << " |\n";
 }
 
-// Тест: Разделяемое владение
-inline void run_shared_benchmark(size_t iterations) {
+//Разделяемое владение
+inline void run_shared_benchmark(size_t iterations)
+{
     volatile int sink = 0;
 
     //Сырые указатели
     Timer t_raw;
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i)
+    {
         int* p1 = new int(static_cast<int>(i));
         int* p2 = p1;
         sink += *p2;
@@ -73,7 +81,8 @@ inline void run_shared_benchmark(size_t iterations) {
 
     //ShrdPtr
     Timer t_my;
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i)
+    {
         ShrdPtr<int> p1(new int(static_cast<int>(i)));
         ShrdPtr<int> p2 = p1;
         sink += *p2;
@@ -82,7 +91,8 @@ inline void run_shared_benchmark(size_t iterations) {
 
     //STL
     Timer t_stl;
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i)
+    {
         std::shared_ptr<int> p1(new int(static_cast<int>(i)));
         std::shared_ptr<int> p2 = p1;
         sink += *p2;

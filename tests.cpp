@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <utility>
-#include "SmartPtrs.h"
+#include "UniqPtr.h"
+#include "SharedPrt.h"
 
 struct Tracker {
     static int alive;

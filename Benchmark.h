@@ -5,7 +5,8 @@
 #include <iomanip>
 #include <chrono>
 #include <memory>
-#include "SmartPtrs.h"
+#include "UniqPtr.h"
+#include "SharedPrt.h"
 
 class Timer
 {

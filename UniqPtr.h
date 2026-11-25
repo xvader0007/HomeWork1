@@ -7,10 +7,10 @@ class UniqPtr
 private:
     T* ptr;
 public:
-    explicit UniqPtr(T* ptr_a = nullptr) : ptr(ptr_a) {}
+    explicit UniqPtr(T* ptr_a = nullptr) noexcept : ptr(ptr_a) {}
     UniqPtr(const UniqPtr& other) = delete;
     UniqPtr& operator=(const UniqPtr& other) = delete;
-    UniqPtr(UniqPtr&& other) noexcept
+    UniqPtr(UniqPtr&& other) noexcept : ptr(other.ptr)
     {
         other.ptr = nullptr;
     }
@@ -30,7 +30,7 @@ public:
     T* Get() const noexcept {return ptr;}
 
     template <typename U>
-    UniqPtr(const UniqPtr<U>&& other) noexcept : ptr(other.Release()) {}
+    UniqPtr(UniqPtr<U>&& other) noexcept : ptr(other.Release()) {}
 
 
     T* Release() noexcept
@@ -65,7 +65,7 @@ private:
     T* ptr;
     int count;
 public:
-    explicit UniqPtr(T* ptr_a = nullptr, int size = 0) : ptr(ptr_a), count(ptr_a ? size : 0) {}
+    explicit UniqPtr(T* ptr_a = nullptr, int size = 0) noexcept : ptr(ptr_a), count(ptr_a ? size : 0) {}
     UniqPtr(const UniqPtr& other) = delete;
 
     UniqPtr& operator=(const UniqPtr& other) = delete;

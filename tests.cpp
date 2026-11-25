@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <utility>
 #include "UniqPtr.h"
-#include "SharedPrt.h"
+#include "ShrdPtr.h"
 
 struct Tracker {
     static int alive;
@@ -98,18 +98,18 @@ Tracker::alive = 0;
 {
 ShrdPtr<Tracker> p1(new Tracker(42));
 EXPECT_EQ(Tracker::alive, 1);
-EXPECT_EQ(p1.use_count(), 1);
+EXPECT_EQ(p1.Use_count(), 1);
 
 {
 ShrdPtr<Tracker> p2 = p1;
 ShrdPtr<Tracker> p3;
 p3 = p2;
 EXPECT_EQ(Tracker::alive, 1);
-EXPECT_EQ(p1.use_count(), 3);
+EXPECT_EQ(p1.Use_count(), 3);
 }
 
 EXPECT_EQ(Tracker::alive, 1);
-EXPECT_EQ(p1.use_count(), 1);
+EXPECT_EQ(p1.Use_count(), 1);
 }
 EXPECT_EQ(Tracker::alive, 0);
 }
@@ -120,7 +120,7 @@ Tracker::alive = 0;
 ShrdPtr<DerivedTracker> derived(new DerivedTracker(99));
 ShrdPtr<Tracker> base = derived;
 EXPECT_EQ(Tracker::alive, 1);
-EXPECT_EQ(base.use_count(), 2);
+EXPECT_EQ(base.Use_count(), 2);
 }
 EXPECT_EQ(Tracker::alive, 0);
 }
@@ -131,7 +131,7 @@ Tracker::alive = 0;
 ShrdPtr<Tracker[]> arr1(new Tracker[4]);
 ShrdPtr<Tracker[]> arr2 = arr1;
 EXPECT_EQ(Tracker::alive, 4);
-EXPECT_EQ(arr1.use_count(), 2);
+EXPECT_EQ(arr1.Use_count(), 2);
 }
 EXPECT_EQ(Tracker::alive, 0);
 }

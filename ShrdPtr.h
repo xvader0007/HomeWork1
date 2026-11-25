@@ -1,5 +1,5 @@
-#ifndef MY_APP_SHAREDPRT_H
-#define MY_APP_SHAREDPRT_H
+#ifndef MY_APP_SHAREDPTR_H
+#define MY_APP_SHAREDPTR_H
 
 #include <atomic>
 
@@ -70,7 +70,7 @@ public:
 
     ShrdPtr& operator=(const ShrdPtr& other) noexcept
     {
-        if(this != &other)
+        if(cb != &other)
         {
             Release();
 
@@ -105,7 +105,7 @@ public:
 
     T& operator*() const { return *ptr; }
     T* operator->() const { return ptr; }
-    T* get() const noexcept { return ptr; }
+    T* Get() const noexcept { return ptr; }
     int Use_count() const noexcept { return cb ? cb->Use_count() : 0; }
 
     void Reset(T* ptr_p = nullptr)
@@ -166,7 +166,7 @@ public:
 
     ShrdPtr& operator=(const ShrdPtr& other) noexcept
     {
-        if (this != &other)
+        if (cb != &other)
         {
             Release();
             ptr = other.ptr;
@@ -199,7 +199,7 @@ public:
     }
 
     T& operator[](int index) const { return ptr[index]; }
-    T* get() const noexcept { return ptr; }
+    T* Get() const noexcept { return ptr; }
     int Use_count() const noexcept { return cb ? cb->Use_count() : 0; }
 
     void Reset(T* ptr_p = nullptr)
@@ -217,4 +217,4 @@ public:
     ~ShrdPtr() { Release(); }
 };
 
-#endif //MY_APP_SHAREDPRT_H
+#endif //MY_APP_SHAREDPTR_H

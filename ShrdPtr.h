@@ -70,7 +70,7 @@ public:
 
     ShrdPtr& operator=(const ShrdPtr& other) noexcept
     {
-        if(cb != &other)
+        if(cb != other.cb)
         {
             Release();
 
@@ -166,7 +166,7 @@ public:
 
     ShrdPtr& operator=(const ShrdPtr& other) noexcept
     {
-        if (cb != &other)
+        if (cb != other.cb)
         {
             Release();
             ptr = other.ptr;

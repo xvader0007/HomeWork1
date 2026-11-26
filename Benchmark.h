@@ -24,7 +24,7 @@ public:
     }
 };
 
-// Вспомогательная функция для вывода строки таблицы
+//Вспомогательная функция для вывода строки таблицы
 inline void print_row(size_t iterations, double time_raw, double time_my, double time_stl)
 {
     double ratio = (time_stl > 0.0001) ? (time_my / time_stl) : 1.0;
@@ -36,7 +36,7 @@ inline void print_row(size_t iterations, double time_raw, double time_my, double
               << " | " << std::setw(8) << std::setprecision(2) << ratio << "x |\n";
 }
 
-// 1. UniqPtr: Создание, доступ и удаление (одиночный объект)
+//UniqPtr создание, доступ и удаление
 inline void run_unique_create_benchmark(size_t iterations)
 {
     volatile int sink = 0;
@@ -70,7 +70,7 @@ inline void run_unique_create_benchmark(size_t iterations)
     print_row(iterations, time_raw, time_my, time_stl);
 }
 
-// 2. UniqPtr: Чистое перемещение (без выделения памяти в цикле)
+//UniqPtr чистое перемещение
 inline void run_unique_move_benchmark(size_t iterations)
 {
     volatile int sink = 0;
@@ -111,11 +111,11 @@ inline void run_unique_move_benchmark(size_t iterations)
     print_row(iterations, time_raw, time_my, time_stl);
 }
 
-// 3. UniqPtr<T[]>: Создание, индексация и удаление массивов (по 16 int)
+//UniqPtr<T[]> создание, индексация и удаление массивов
 inline void run_unique_array_benchmark(size_t iterations)
 {
     volatile int sink = 0;
-    constexpr int ARR_SIZE = 16;
+    const int ARR_SIZE = 16;
 
     Timer t_raw;
     for (size_t i = 0; i < iterations; ++i)
@@ -149,7 +149,7 @@ inline void run_unique_array_benchmark(size_t iterations)
     print_row(iterations, time_raw, time_my, time_stl);
 }
 
-// 4. ShrdPtr: Создание, копирование и удаление (полный цикл с ControlBlock)
+//ShrdPtr создание, копирование и удаление
 inline void run_shared_create_benchmark(size_t iterations)
 {
     volatile int sink = 0;
@@ -186,7 +186,7 @@ inline void run_shared_create_benchmark(size_t iterations)
     print_row(iterations, time_raw, time_my, time_stl);
 }
 
-// 5. ShrdPtr: Чистое копирование (стресс-тест атомарного ControlBlock без new/delete)
+//ShrdPtr чистое копирование (ControlBlock)
 inline void run_shared_copy_benchmark(size_t iterations)
 {
     volatile int sink = 0;

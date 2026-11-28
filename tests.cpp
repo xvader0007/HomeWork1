@@ -1,6 +1,6 @@
-#include <gtest/gtest.h> // Фреймворк GoogleTest (макросы TEST, EXPECT_EQ и т.д.)
-#include <utility>       // std::move — для тестирования семантики перемещения
-#include <type_traits>   // std::is_copy_constructible_v — проверка запрета копирования на этапе компиляции
+#include <gtest/gtest.h> 
+#include <utility>       
+#include <type_traits>
 #include "UniqPtr.h"
 #include "ShrdPtr.h"
 
